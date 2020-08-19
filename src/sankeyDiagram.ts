@@ -646,7 +646,7 @@ export class SankeyDiagram implements IVisual {
         settings: SankeyDiagramSettings,
         selectionIdBuilder: SelectionIdBuilder,
         source: DataViewMetadataColumn,
-        linksObjects: DataViewObjects[],
+        nodesObjects: DataViewObjects[],
         sourceCategoriesLabels?: any[],
         destinationCategoriesLabels?: any[]): SankeyDiagramNode[] {
 
@@ -684,6 +684,7 @@ export class SankeyDiagram implements IVisual {
             let formattedValue: string = valueFormatterForCategories.format((<string>labelsDictionary[item].toString()).replace(SankeyDiagram.DuplicatedNamePostfix, "")),
                 label: SankeyDiagramLabel,
                 selectableDataPoint: SelectableDataPoint,
+                selectionId: ISelectionId,
                 textProperties: TextProperties = {
                     text: formattedValue,
                     fontFamily: this.textProperties.fontFamily,
@@ -698,8 +699,14 @@ export class SankeyDiagram implements IVisual {
                 height: textMeasurementService.estimateSvgTextHeight(textProperties),
                 color: settings.labels.fill
             };
-            nodeFillColor = this.colorHelper.isHighContrast ? this.colorHelper.getThemeColor() : this.colorPalette.getColor(item).value;
+            nodeFillColor = this.getColor(
+                SankeyDiagram.NodesPropertyIdentifier,
+                this.colorHelper.isHighContrast ? this.colorHelper.getThemeColor() : this.colorPalette.getColor(item).value,//SankeyDiagram.DefaultColourOfNode,
+                nodesObjects[index]);
+            //nodeFillColor = this.colorHelper.isHighContrast ? this.colorHelper.getThemeColor() : this.colorPalette.getColor(item).value;
             nodeStrokeColor = this.colorHelper.getHighContrastColor("foreground", nodeFillColor);
+
+            selectionId = selectionIdBuilder.createSelectionId(index);
 
             if (nodes.filter((node: SankeyDiagramNode) => {
                 return node.label.name === item;
@@ -718,7 +725,9 @@ export class SankeyDiagram implements IVisual {
                     strokeColor: nodeStrokeColor,
                     tooltipInfo: [],
                     selectableDataPoints: [],
-                    settings: null
+                    settings: null,
+                    identity: selectionId,
+                    selected: false
                 });
         });
 
@@ -2343,6 +2352,10 @@ export class SankeyDiagram implements IVisual {
             this.enumerateLinks(instanceEnumeration);
         }
 
+        if (options.objectName === SankeyDiagram.NodesPropertyIdentifier.objectName) {
+            this.enumerateNodes(instanceEnumeration);
+        }
+
         // hide scale settings
         if (options.objectName === SankeyDiagram.NodeComplexSettingsPropertyIdentifier.objectName) {
             (<VisualObjectInstanceEnumerationObject>instanceEnumeration).instances = (<VisualObjectInstanceEnumerationObject>instanceEnumeration).instances
@@ -2369,6 +2382,28 @@ export class SankeyDiagram implements IVisual {
                 selector: ColorHelper.normalizeSelector(identity.getSelector(), false),
                 properties: {
                     fill: { solid: { color: link.fillColor } }
+                }
+            });
+        });
+    }
+
+    private enumerateNodes(instanceEnumeration: VisualObjectInstanceEnumeration): void {
+        const nodes: SankeyDiagramNode[] = this.dataView && this.dataView.nodes;
+
+        if (!nodes || !(nodes.length > 0)) {
+            return;
+        }
+
+        nodes.forEach((node: SankeyDiagramNode) => {
+            const identity: ISelectionId = <ISelectionId>node.identity,
+                displayName: string = `${node.label.formattedName}`;
+
+            this.addAnInstanceToEnumeration(instanceEnumeration, {
+                displayName,
+                objectName: SankeyDiagram.NodesPropertyIdentifier.objectName,
+                selector: ColorHelper.normalizeSelector(identity.getSelector(), false),
+                properties: {
+                    fill: { solid: { color: node.fillColor } }
                 }
             });
         });

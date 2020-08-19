@@ -233,7 +233,7 @@
             }
         },
         "nodeComplexSettings": {
-            "displayName": "Sankey settigns",
+            "displayName": "Sankey settings",
             "displayNameKey": "Visual_SankeySettings",
             "properties": {
                 "nodePositions": {
